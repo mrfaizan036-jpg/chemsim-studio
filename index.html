@@ -1,0 +1,2017 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChemSim Studio - Chemical Engineering Simulator & Safety Suite</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            },
+            chem: {
+              dark: '#0b0f19',
+              card: '#111827',
+              border: '#1f293d',
+              accent: '#10b981',
+              warning: '#f59e0b',
+              danger: '#ef4444',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom styling for precise engineering diagrams & dark glass aesthetics */
+    body {
+      background-color: #080d1a;
+      color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+    }
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-input {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid #334155;
+    }
+    .glass-input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    input[type=range] {
+      accent-color: #0ea5e9;
+    }
+    /* NFPA Diamond Stylings */
+    .nfpa-diamond-box {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      margin: 10px auto;
+      transform: rotate(45deg);
+      border: 2px solid #334155;
+      background: #0f172a;
+    }
+    .nfpa-cell {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .nfpa-text {
+      transform: rotate(-45deg);
+      font-size: 1.25rem;
+    }
+    .nfpa-top { top: 0; left: 0; background-color: #ef4444; color: white; }
+    .nfpa-left { top: 50%; left: 0; background-color: #3b82f6; color: white; }
+    .nfpa-right { top: 0; left: 50%; background-color: #eab308; color: #000; }
+    .nfpa-bottom { top: 50%; left: 50%; background-color: #f8fafc; color: #000; }
+    
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+  <header class="border-b border-chem-border bg-chem-dark/90 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-gradient-to-tr from-brand-600 to-emerald-400 rounded-xl shadow-lg shadow-brand-500/20">
+            <i data-lucide="flask-conical" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-xl tracking-tight text-white">ChemSim <span class="text-brand-400">Studio</span></span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/30 font-semibold uppercase tracking-wider">v2.4 Core</span>
+            </div>
+            <p class="text-xs text-slate-400 hidden sm:block">Chemical Engineering Process Simulator & Safety Matrix</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex space-x-1 sm:space-x-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800" role="tablist">
+          <button id="tab-btn-distillation" onclick="switchTab('distillation')" class="tab-btn active px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 bg-brand-600 text-white shadow-sm">
+            <i data-lucide="orbit" class="w-4 h-4"></i>
+            <span class="hidden md:inline">Distillation</span> (McCabe-Thiele)
+          </button>
+          <button id="tab-btn-heatex" onclick="switchTab('heatex')" class="tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="flame" class="w-4 h-4"></i>
+            <span class="hidden md:inline">Heat Exchanger</span> (LMTD)
+          </button>
+          <button id="tab-btn-safety" onclick="switchTab('safety')" class="tab-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/60">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            <span class="hidden md:inline">Safety & GHS</span> Matrix
+          </button>
+        </nav>
+
+        <!-- Quick actions -->
+        <div class="flex items-center space-x-2">
+          <button onclick="openReportModal()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+            <i data-lucide="file-text" class="w-4 h-4 text-brand-400"></i>
+            <span>Export Report</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Alert/Status Banner Container -->
+  <div id="status-banner" class="hidden bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-amber-300 text-xs flex items-center justify-center gap-2 transition-all">
+    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+    <span id="status-banner-text">Caution: Operating parameter approaching physical limits.</span>
+  </div>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- TAB 1: MCCABE-THIELE DISTILLATION COLUMN -->
+    <section id="tab-distillation" class="tab-content block space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            McCabe-Thiele Binary Distillation Column
+            <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">Equilibrium Analysis</span>
+          </h1>
+          <p class="text-sm text-slate-400">Calculate theoretical equilibrium stages, pinch points, and reflux bounds dynamically.</p>
+        </div>
+
+        <!-- Presets -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400 font-medium">Quick Preset:</label>
+          <select id="distill-preset" onchange="applyDistillPreset()" class="glass-input text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none">
+            <option value="custom">Custom Parameters</option>
+            <option value="benzene-toluene" selected>Benzene - Toluene (&alpha; = 2.45)</option>
+            <option value="acetone-water">Acetone - Water Approx (&alpha; = 3.60)</option>
+            <option value="heptane-octane">n-Heptane - n-Octane (&alpha; = 2.15)</option>
+            <option value="ethanol-water-ideal">Idealized Alcohol Split (&alpha; = 1.95)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Control Parameters Sidebar -->
+        <div class="lg:col-span-4 space-y-4">
+          <div class="glass-panel p-5 rounded-2xl space-y-5">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+              <i data-lucide="sliders" class="w-4 h-4 text-brand-400"></i> Operational Parameters
+            </h2>
+
+            <!-- Relative Volatility Alpha -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Relative Volatility (&alpha;)</span>
+                <span id="val-alpha" class="font-mono text-brand-400 font-semibold">2.45</span>
+              </div>
+              <input type="range" id="input-alpha" min="1.1" max="5.0" step="0.05" value="2.45" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+              <p class="text-[11px] text-slate-500">Measure of ease of separation (1.0 = azeotrope/inseparable)</p>
+            </div>
+
+            <!-- Feed Composition zF -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Feed Composition (z<sub>F</sub>)</span>
+                <span id="val-zf" class="font-mono text-brand-400 font-semibold">0.50</span>
+              </div>
+              <input type="range" id="input-zf" min="0.10" max="0.90" step="0.01" value="0.50" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+            </div>
+
+            <!-- Distillate Purity xD -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Distillate Purity (x<sub>D</sub>)</span>
+                <span id="val-xd" class="font-mono text-brand-400 font-semibold">0.95</span>
+              </div>
+              <input type="range" id="input-xd" min="0.60" max="0.99" step="0.01" value="0.95" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+            </div>
+
+            <!-- Bottoms Residue xB -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Bottoms Purity (x<sub>B</sub>)</span>
+                <span id="val-xb" class="font-mono text-brand-400 font-semibold">0.05</span>
+              </div>
+              <input type="range" id="input-xb" min="0.01" max="0.40" step="0.01" value="0.05" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+            </div>
+
+            <!-- Reflux Ratio R -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Reflux Ratio (R = L/D)</span>
+                <span id="val-reflux" class="font-mono text-brand-400 font-semibold">1.80</span>
+              </div>
+              <input type="range" id="input-reflux" min="0.5" max="8.0" step="0.05" value="1.80" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[11px] text-slate-500">
+                <span>R<sub>min</sub>: <span id="val-rmin" class="font-mono text-slate-300">--</span></span>
+                <span>Operating/Rmin: <span id="val-rmult" class="font-mono text-slate-300">--</span></span>
+              </div>
+            </div>
+
+            <!-- Feed Condition q -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-300 font-medium">Feed Thermal State (q)</span>
+                <span id="val-q" class="font-mono text-brand-400 font-semibold">1.00</span>
+              </div>
+              <input type="range" id="input-q" min="0.0" max="1.5" step="0.05" value="1.00" oninput="updateDistillation()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>0.0 (Dew Point)</span>
+                <span class="text-brand-400 font-medium" id="q-label">1.0 (Bubble Pt Liquid)</span>
+                <span>&gt;1.0 (Subcooled)</span>
+              </div>
+            </div>
+
+            <!-- Feed Flow Rate for Mass Balance -->
+            <div class="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="text-slate-400 block mb-1">Feed Flow F (kmol/h)</label>
+                <input type="number" id="input-f" value="100" min="1" step="5" onchange="updateDistillation()" class="w-full glass-input p-1.5 rounded text-white font-mono text-xs">
+              </div>
+              <div>
+                <label class="text-slate-400 block mb-1">Target Stages</label>
+                <div id="stat-stage-badge" class="font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-1.5 rounded text-center">
+                  Calculating...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Diagram Canvas & Metrics -->
+        <div class="lg:col-span-8 space-y-4 flex flex-col">
+          <div class="glass-panel p-5 rounded-2xl flex-1 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-white">McCabe-Thiele Equilibrium Diagram</span>
+                <span class="text-xs text-slate-400 font-mono">(y vs x)</span>
+              </div>
+
+              <!-- Legend -->
+              <div class="flex flex-wrap gap-3 text-[11px] font-mono">
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-blue-400 inline-block"></span> VLE Curve</div>
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-slate-500 inline-block"></span> 45° Line</div>
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-amber-400 inline-block"></span> q-Line</div>
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-purple-400 inline-block"></span> ROL (Top)</div>
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-cyan-400 inline-block"></span> SOL (Bot)</div>
+                <div class="flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-400 inline-block"></span> Stages</div>
+              </div>
+            </div>
+
+            <!-- Canvas wrapper (responsive) -->
+            <div class="relative w-full aspect-square max-h-[500px] bg-slate-950/80 rounded-xl border border-slate-800 p-2 overflow-hidden flex items-center justify-center">
+              <canvas id="mccabe-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+              <div id="canvas-tooltip" class="absolute hidden pointer-events-none bg-slate-900 border border-slate-700 px-2.5 py-1.5 rounded text-xs font-mono text-white shadow-xl">
+                x: 0.00, y: 0.00
+              </div>
+            </div>
+
+            <!-- Column Metrics Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Total Theoretical Stages</span>
+                <span id="metric-stages" class="text-lg font-bold font-mono text-white">--</span>
+                <span class="text-[10px] text-slate-500 block">Excluding Reboiler</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Optimal Feed Stage</span>
+                <span id="metric-feed-stage" class="text-lg font-bold font-mono text-brand-400">--</span>
+                <span class="text-[10px] text-slate-500 block">From Column Top</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Distillate Flow (D)</span>
+                <span id="metric-d-flow" class="text-lg font-bold font-mono text-emerald-400">--</span>
+                <span class="text-[10px] text-slate-500 block">kmol / hour</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Bottoms Flow (B)</span>
+                <span id="metric-b-flow" class="text-lg font-bold font-mono text-purple-400">--</span>
+                <span class="text-[10px] text-slate-500 block">kmol / hour</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SHELL & TUBE HEAT EXCHANGER -->
+    <section id="tab-heatex" class="tab-content hidden space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Shell & Tube Heat Exchanger Thermal Rating
+            <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">LMTD Method</span>
+          </h1>
+          <p class="text-sm text-slate-400">Calculate heat duty (Q), log mean temperature difference, 1-2 pass F-correction, and required surface area.</p>
+        </div>
+
+        <!-- Flow arrangement switch -->
+        <div class="flex items-center gap-3 bg-slate-900 p-1.5 rounded-xl border border-slate-800 text-xs">
+          <label class="text-slate-400 font-medium pl-1">Configuration:</label>
+          <button id="btn-flow-counter" onclick="setExchangerFlow('counter')" class="px-3 py-1 rounded-lg font-medium bg-brand-600 text-white">Counter-Current</button>
+          <button id="btn-flow-cocurrent" onclick="setExchangerFlow('cocurrent')" class="px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white">Co-Current (Parallel)</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Input Parameters Panel -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="glass-panel p-5 rounded-2xl space-y-5">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+              <i data-lucide="thermometer" class="w-4 h-4 text-brand-400"></i> Thermal Streams & Fluids
+            </h2>
+
+            <!-- Hot Stream -->
+            <div class="bg-red-950/20 border border-red-900/30 p-3.5 rounded-xl space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-red-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i> Hot Stream (Shell/Tube)
+                </span>
+                <select id="preset-hot-fluid" onchange="applyFluidPreset('hot')" class="glass-input text-[11px] text-slate-300 rounded px-2 py-0.5">
+                  <option value="water">Hot Water (Cp ~ 4.18 kJ/kg·K)</option>
+                  <option value="oil" selected>Engine Oil (Cp ~ 2.10 kJ/kg·K)</option>
+                  <option value="glycol">Ethylene Glycol (Cp ~ 2.50 kJ/kg·K)</option>
+                  <option value="custom">Custom Cp</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-slate-400 block mb-1">Inlet Temp T<sub>h,in</sub> (°C)</label>
+                  <input type="number" id="th-in" value="120" step="1" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Outlet Temp T<sub>h,out</sub> (°C)</label>
+                  <input type="number" id="th-out" value="65" step="1" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-slate-400 block mb-1">Mass Flow Rate m<sub>h</sub> (kg/s)</label>
+                  <input type="number" id="mh-flow" value="2.5" step="0.1" min="0.01" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Specific Heat C<sub>p,h</sub> (kJ/kg·K)</label>
+                  <input type="number" id="cph-val" value="2.10" step="0.05" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+              </div>
+            </div>
+
+            <!-- Cold Stream -->
+            <div class="bg-blue-950/20 border border-blue-900/30 p-3.5 rounded-xl space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Cold Stream (Tube/Shell)
+                </span>
+                <select id="preset-cold-fluid" onchange="applyFluidPreset('cold')" class="glass-input text-[11px] text-slate-300 rounded px-2 py-0.5">
+                  <option value="water" selected>Cooling Water (Cp ~ 4.18 kJ/kg·K)</option>
+                  <option value="glycol">Glycol-Water 50% (Cp ~ 3.40 kJ/kg·K)</option>
+                  <option value="custom">Custom Cp</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-slate-400 block mb-1">Inlet Temp T<sub>c,in</sub> (°C)</label>
+                  <input type="number" id="tc-in" value="20" step="1" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Outlet Temp T<sub>c,out</sub> (°C)</label>
+                  <div class="flex gap-1">
+                    <input type="number" id="tc-out" value="48.8" step="0.5" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                    <button onclick="autoBalanceColdOutlet()" title="Auto-calculate Tc,out based on energy balance Q = mh*Cph*dTh" class="px-2 bg-slate-800 hover:bg-slate-700 text-brand-400 rounded text-xs font-medium">Auto</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label class="text-slate-400 block mb-1">Mass Flow Rate m<sub>c</sub> (kg/s)</label>
+                  <input type="number" id="mc-flow" value="2.4" step="0.1" min="0.01" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+                <div>
+                  <label class="text-slate-400 block mb-1">Specific Heat C<sub>p,c</sub> (kJ/kg·K)</label>
+                  <input type="number" id="cpc-val" value="4.18" step="0.05" oninput="updateHeatExchanger()" class="w-full glass-input p-2 rounded text-white font-mono">
+                </div>
+              </div>
+            </div>
+
+            <!-- Heat Transfer Coefficient & Shell Pass Details -->
+            <div class="space-y-3 pt-1">
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-300">Overall Heat Transfer Coeff (U)</span>
+                  <span class="font-mono text-brand-400 font-semibold"><span id="val-u-label">650</span> W/m²·K</span>
+                </div>
+                <input type="range" id="input-u" min="50" max="2000" step="25" value="650" oninput="updateHeatExchanger()" class="w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>Gas/Gas (~50-100)</span>
+                  <span>Liquid/Liquid (~400-1200)</span>
+                  <span>Condensing (~2000+)</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-800">
+                <span class="text-slate-300">Exchanger Construction:</span>
+                <select id="exchanger-type" onchange="updateHeatExchanger()" class="glass-input text-xs text-white rounded p-1.5">
+                  <option value="1-1">1 Shell Pass, 1 Tube Pass (Pure Counter/Co)</option>
+                  <option value="1-2" selected>1 Shell Pass, 2 Tube Passes (TEMA E)</option>
+                  <option value="2-4">2 Shell Passes, 4 Tube Passes</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Thermal Profile Graph & Performance Output -->
+        <div class="lg:col-span-7 space-y-4 flex flex-col">
+          <div class="glass-panel p-5 rounded-2xl flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                Fluid Temperature Profile along Heat Exchanger Length
+              </h3>
+              <span id="badge-temp-cross" class="hidden text-[11px] font-mono font-medium px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                Temperature Cross Detected!
+              </span>
+            </div>
+
+            <!-- SVG Temperature Profile Graph -->
+            <div class="bg-slate-950/80 rounded-xl border border-slate-800 p-3 h-64 flex items-center justify-center">
+              <svg id="heatex-svg" class="w-full h-full" viewBox="0 0 600 240">
+                <!-- SVG dynamically drawn in JS -->
+              </svg>
+            </div>
+
+            <!-- Calculated KPIs Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Heat Duty (Q)</span>
+                <span id="metric-heat-duty" class="text-lg font-bold font-mono text-amber-400">--</span>
+                <span class="text-[10px] text-slate-500 block">kW (Thermal)</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">&Delta;T<sub>LMTD</sub></span>
+                <span id="metric-lmtd" class="text-lg font-bold font-mono text-sky-400">--</span>
+                <span class="text-[10px] text-slate-500 block">°C (Log Mean)</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">F Correction Factor</span>
+                <span id="metric-f-factor" class="text-lg font-bold font-mono text-emerald-400">--</span>
+                <span class="text-[10px] text-slate-500 block">Geometry penalty</span>
+              </div>
+              <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                <span class="text-[11px] text-slate-400 block">Required Area (A)</span>
+                <span id="metric-area" class="text-lg font-bold font-mono text-purple-400">--</span>
+                <span class="text-[10px] text-slate-500 block">m² surface area</span>
+              </div>
+            </div>
+
+            <!-- Heat Transfer Tube Sizing Estimation -->
+            <div class="mt-4 p-4 rounded-xl bg-slate-900/40 border border-slate-800/80">
+              <h4 class="text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wide">Tube Count & Layout Sizing Estimate (OD 3/4" - 19.05mm, Length 4m)</h4>
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="p-2 rounded bg-slate-800/50">
+                  <span class="text-[11px] text-slate-400 block">Estimated Tubes</span>
+                  <span id="metric-tube-count" class="font-mono text-sm font-bold text-white">--</span>
+                </div>
+                <div class="p-2 rounded bg-slate-800/50">
+                  <span class="text-[11px] text-slate-400 block">Exchanger Thermal Effectiveness &epsilon;</span>
+                  <span id="metric-effectiveness" class="font-mono text-sm font-bold text-emerald-400">--</span>
+                </div>
+                <div class="p-2 rounded bg-slate-800/50">
+                  <span class="text-[11px] text-slate-400 block">Shell Diameter Approx</span>
+                  <span id="metric-shell-diam" class="font-mono text-sm font-bold text-brand-400">--</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: GHS CHEMICAL HAZARD & COMPATIBILITY MATRIX -->
+    <section id="tab-safety" class="tab-content hidden space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            Chemical Safety, GHS Classification & Compatibility Matrix
+            <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">OSHA & EPA Compliance</span>
+          </h1>
+          <p class="text-sm text-slate-400">Rapid SDS hazard identification, NFPA 704 standard ratings, and hazardous binary mixing reactivity check.</p>
+        </div>
+
+        <div class="relative w-full md:w-64">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+          <input type="text" id="chemical-search" placeholder="Search 16+ chemicals..." oninput="filterChemicalSelect()" class="w-full glass-input text-xs pl-9 pr-3 py-2 rounded-xl text-white placeholder-slate-500">
+        </div>
+      </div>
+
+      <!-- Chemical Safety Details & NFPA Card -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Chemical Selector & SDS Overview -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="glass-panel p-5 rounded-2xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Select Substance:</label>
+                <select id="select-primary-chem" onchange="renderSelectedChemical()" class="glass-input text-sm font-semibold text-white rounded-lg px-3 py-1.5 focus:outline-none">
+                  <!-- Options populated dynamically in JS -->
+                </select>
+              </div>
+
+              <div id="chem-signal-badge" class="px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-red-500/20 text-red-400 border border-red-500/40">
+                DANGER
+              </div>
+            </div>
+
+            <!-- Formula & CAS Info -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">Formula</span>
+                <span id="chem-formula" class="font-mono text-sm font-semibold text-white">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">CAS Registry #</span>
+                <span id="chem-cas" class="font-mono text-sm font-semibold text-brand-400">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">Boiling Point</span>
+                <span id="chem-bp" class="font-mono text-sm font-semibold text-emerald-400">--</span>
+              </div>
+              <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">Flash Point</span>
+                <span id="chem-flash" class="font-mono text-sm font-semibold text-amber-400">--</span>
+              </div>
+            </div>
+
+            <!-- GHS Pictograms -->
+            <div>
+              <span class="text-xs text-slate-300 font-semibold block mb-2">GHS Hazard Pictograms:</span>
+              <div id="ghs-pictograms" class="flex flex-wrap gap-2">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Hazard & Precautionary Statements -->
+            <div class="space-y-3 pt-2">
+              <div>
+                <span class="text-xs font-semibold text-red-400 block mb-1">Hazard Statements (H-Codes):</span>
+                <div id="chem-h-statements" class="text-xs text-slate-300 space-y-1 bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 max-h-32 overflow-y-auto font-mono">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+              <div>
+                <span class="text-xs font-semibold text-brand-400 block mb-1">Precautionary Protocols (P-Codes):</span>
+                <div id="chem-p-statements" class="text-xs text-slate-300 space-y-1 bg-slate-900/40 p-3 rounded-lg border border-slate-800/80 max-h-32 overflow-y-auto font-mono">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- NFPA 704 Diamond Card -->
+        <div class="lg:col-span-5 space-y-4">
+          <div class="glass-panel p-5 rounded-2xl flex flex-col items-center justify-between text-center">
+            <h3 class="text-sm font-semibold text-white mb-2">NFPA 704 Standard Hazard Identification</h3>
+            <p class="text-xs text-slate-400 max-w-xs">Standard system for the identification of the hazards of materials for emergency response.</p>
+
+            <!-- NFPA Diamond Canvas / HTML Structure -->
+            <div class="my-6">
+              <div class="nfpa-diamond-box shadow-2xl">
+                <!-- Red: Flammability (Top) -->
+                <div class="nfpa-cell nfpa-top">
+                  <span id="nfpa-flammability" class="nfpa-text">3</span>
+                </div>
+                <!-- Blue: Health (Left) -->
+                <div class="nfpa-cell nfpa-left">
+                  <span id="nfpa-health" class="nfpa-text">2</span>
+                </div>
+                <!-- Yellow: Instability / Reactivity (Right) -->
+                <div class="nfpa-cell nfpa-right">
+                  <span id="nfpa-instability" class="nfpa-text">0</span>
+                </div>
+                <!-- White: Special Hazards (Bottom) -->
+                <div class="nfpa-cell nfpa-bottom">
+                  <span id="nfpa-special" class="nfpa-text text-sm">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Legend breakdown for active ratings -->
+            <div class="w-full grid grid-cols-2 gap-2 text-left text-xs font-mono mt-2">
+              <div class="p-2 rounded bg-blue-950/30 border border-blue-900/40">
+                <span class="text-blue-400 font-bold">HEALTH:</span>
+                <span id="nfpa-desc-health" class="text-slate-300 block text-[11px]">Warning</span>
+              </div>
+              <div class="p-2 rounded bg-red-950/30 border border-red-900/40">
+                <span class="text-red-400 font-bold">FLAMMABILITY:</span>
+                <span id="nfpa-desc-flam" class="text-slate-300 block text-[11px]">Flammable</span>
+              </div>
+              <div class="p-2 rounded bg-yellow-950/30 border border-yellow-900/40">
+                <span class="text-yellow-400 font-bold">INSTABILITY:</span>
+                <span id="nfpa-desc-react" class="text-slate-300 block text-[11px]">Stable</span>
+              </div>
+              <div class="p-2 rounded bg-slate-800/40 border border-slate-700/50">
+                <span class="text-slate-200 font-bold">SPECIAL:</span>
+                <span id="nfpa-desc-spec" class="text-slate-400 block text-[11px]">None</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Binary Chemical Incompatibility & Reactivity Checker -->
+      <div class="glass-panel p-6 rounded-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i> Interactive Binary Mixture Incompatibility Checker
+            </h2>
+            <p class="text-xs text-slate-400">Simulate simultaneous handling or accidental co-mingling of two industrial reagents.</p>
+          </div>
+          <span class="text-xs font-mono text-slate-400">EPA Chemical Reactivity Model</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+          <div class="md:col-span-2 space-y-1">
+            <label class="text-xs text-slate-400">Reagent Alpha:</label>
+            <select id="mix-chem-1" onchange="evaluateCompatibility()" class="w-full glass-input text-xs font-medium text-white rounded-lg p-2.5">
+              <!-- Reagents injected via JS -->
+            </select>
+          </div>
+
+          <div class="flex justify-center items-center">
+            <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 text-brand-400 font-bold">
+              +
+            </div>
+          </div>
+
+          <div class="md:col-span-2 space-y-1">
+            <label class="text-xs text-slate-400">Reagent Beta:</label>
+            <select id="mix-chem-2" onchange="evaluateCompatibility()" class="w-full glass-input text-xs font-medium text-white rounded-lg p-2.5">
+              <!-- Reagents injected via JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Outcome Notification Alert Card -->
+        <div id="compat-result-card" class="mt-4 p-4 rounded-xl border transition-all">
+          <div class="flex items-start gap-3">
+            <div id="compat-icon" class="p-2 rounded-lg mt-0.5">
+              <!-- Lucide icon injected in JS -->
+            </div>
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center justify-between">
+                <h4 id="compat-title" class="text-sm font-bold tracking-tight">Evaluating Mixture...</h4>
+                <span id="compat-badge" class="text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold">WARNING</span>
+              </div>
+              <p id="compat-explanation" class="text-xs text-slate-300 leading-relaxed">
+                Loading compatibility matrix...
+              </p>
+              <div id="compat-hazard-tags" class="flex flex-wrap gap-1.5 pt-2">
+                <!-- Hazard tags -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Export Report Modal -->
+  <div id="report-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-2xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between p-4 border-b border-slate-800">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="printer" class="w-5 h-5 text-brand-400"></i> ChemSim Engineering Calculation Summary
+        </h3>
+        <button onclick="closeReportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-4 text-xs font-mono text-slate-300" id="report-modal-content">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-2">
+        <button onclick="closeReportModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white rounded-lg bg-slate-800 hover:bg-slate-700">Close</button>
+        <button onclick="window.print()" class="px-4 py-2 text-xs font-semibold text-white rounded-lg bg-brand-600 hover:bg-brand-500 flex items-center gap-2">
+          <i data-lucide="printer" class="w-4 h-4"></i> Print / Save PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       CHEMICAL SAFETY DATABASE (16 Common Industrial Compounds)
+       ========================================================================== */
+    const CHEMICALS_DB = [
+      {
+        id: "acetone",
+        name: "Acetone",
+        formula: "C3H6O",
+        cas: "67-64-1",
+        category: "organic_solvent",
+        bp: "56.05 °C",
+        flash: "-20.0 °C",
+        signal: "DANGER",
+        nfpa: { h: 1, f: 3, r: 0, s: "" },
+        pictograms: ["flame", "exclamation"],
+        hStatements: [
+          "H225: Highly flammable liquid and vapor.",
+          "H319: Causes serious eye irritation.",
+          "H336: May cause drowsiness or dizziness."
+        ],
+        pStatements: [
+          "P210: Keep away from heat, hot surfaces, sparks, open flames.",
+          "P305+P351+P338: IF IN EYES: Rinse cautiously with water for several minutes."
+        ]
+      },
+      {
+        id: "benzene",
+        name: "Benzene",
+        formula: "C6H6",
+        cas: "71-43-2",
+        category: "organic_aromatic",
+        bp: "80.1 °C",
+        flash: "-11.1 °C",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 3, r: 0, s: "" },
+        pictograms: ["flame", "health", "exclamation"],
+        hStatements: [
+          "H225: Highly flammable liquid and vapor.",
+          "H304: May be fatal if swallowed and enters airways.",
+          "H340: May cause genetic defects.",
+          "H350: May cause cancer (Carcinogen 1A)."
+        ],
+        pStatements: [
+          "P201: Obtain special instructions before use.",
+          "P280: Wear protective gloves/clothing/eye protection."
+        ]
+      },
+      {
+        id: "toluene",
+        name: "Toluene",
+        formula: "C7H8",
+        cas: "108-88-3",
+        category: "organic_aromatic",
+        bp: "110.6 °C",
+        flash: "4.4 °C",
+        signal: "DANGER",
+        nfpa: { h: 2, f: 3, r: 0, s: "" },
+        pictograms: ["flame", "health", "exclamation"],
+        hStatements: [
+          "H225: Highly flammable liquid and vapor.",
+          "H361d: Suspected of damaging the unborn child.",
+          "H373: Causes damage to organs through prolonged exposure."
+        ],
+        pStatements: [
+          "P260: Do not breathe dust/fume/gas/mist/vapors.",
+          "P301+P310: IF SWALLOWED: Immediately call POISON CENTER."
+        ]
+      },
+      {
+        id: "ethanol",
+        name: "Ethanol (Absolute)",
+        formula: "C2H5OH",
+        cas: "64-17-5",
+        category: "organic_solvent",
+        bp: "78.24 °C",
+        flash: "13.0 °C",
+        signal: "DANGER",
+        nfpa: { h: 2, f: 3, r: 0, s: "" },
+        pictograms: ["flame", "exclamation"],
+        hStatements: [
+          "H225: Highly flammable liquid and vapor.",
+          "H319: Causes serious eye irritation."
+        ],
+        pStatements: [
+          "P233: Keep container tightly closed.",
+          "P305+P351+P338: IF IN EYES: Rinse cautiously with water."
+        ]
+      },
+      {
+        id: "sulfuric_acid",
+        name: "Sulfuric Acid (Concentrated 98%)",
+        formula: "H2SO4",
+        cas: "7664-93-9",
+        category: "strong_acid",
+        bp: "337.0 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 2, s: "W" },
+        pictograms: ["corrosion"],
+        hStatements: [
+          "H314: Causes severe skin burns and serious eye damage.",
+          "H290: May be corrosive to metals."
+        ],
+        pStatements: [
+          "P260: Do not breathe mist or vapors.",
+          "P280: Wear impervious acid-resistant suit/gloves.",
+          "P301+P330+P331: IF SWALLOWED: Rinse mouth. Do NOT induce vomiting."
+        ]
+      },
+      {
+        id: "hydrochloric_acid",
+        name: "Hydrochloric Acid (37%)",
+        formula: "HCl (aq)",
+        cas: "7647-01-0",
+        category: "strong_acid",
+        bp: "108.6 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 1, s: "" },
+        pictograms: ["corrosion", "exclamation"],
+        hStatements: [
+          "H314: Causes severe skin burns and eye damage.",
+          "H335: May cause respiratory irritation."
+        ],
+        pStatements: [
+          "P261: Avoid breathing vapor/spray.",
+          "P304+P340: IF INHALED: Remove victim to fresh air."
+        ]
+      },
+      {
+        id: "nitric_acid",
+        name: "Nitric Acid (68%)",
+        formula: "HNO3",
+        cas: "7697-37-2",
+        category: "strong_acid_oxidizer",
+        bp: "121.0 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 4, f: 0, r: 0, s: "OX" },
+        pictograms: ["flame_over_circle", "corrosion", "skull"],
+        hStatements: [
+          "H272: May intensify fire; oxidizer.",
+          "H314: Causes severe skin burns.",
+          "H330: Fatal if inhaled."
+        ],
+        pStatements: [
+          "P220: Keep away from clothing/combustible materials.",
+          "P284: [In case of inadequate ventilation] wear respiratory protection."
+        ]
+      },
+      {
+        id: "sodium_hydroxide",
+        name: "Sodium Hydroxide (Caustic Soda)",
+        formula: "NaOH",
+        cas: "1310-73-2",
+        category: "strong_base",
+        bp: "1388 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 1, s: "" },
+        pictograms: ["corrosion"],
+        hStatements: [
+          "H314: Causes severe skin burns and eye damage.",
+          "H290: May be corrosive to metals."
+        ],
+        pStatements: [
+          "P280: Wear protective gloves/eye protection/face protection.",
+          "P303+P361+P353: IF ON SKIN: Immediately take off contaminated clothing."
+        ]
+      },
+      {
+        id: "potassium_hydroxide",
+        name: "Potassium Hydroxide",
+        formula: "KOH",
+        cas: "1310-58-3",
+        category: "strong_base",
+        bp: "1327 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 1, s: "" },
+        pictograms: ["corrosion", "exclamation"],
+        hStatements: [
+          "H302: Harmful if swallowed.",
+          "H314: Causes severe skin burns and eye damage."
+        ],
+        pStatements: [
+          "P301+P312: IF SWALLOWED: Call poison center if you feel unwell."
+        ]
+      },
+      {
+        id: "hydrogen_peroxide",
+        name: "Hydrogen Peroxide (35-50%)",
+        formula: "H2O2",
+        cas: "7722-84-1",
+        category: "oxidizer",
+        bp: "108.0 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 1, s: "OX" },
+        pictograms: ["flame_over_circle", "corrosion", "exclamation"],
+        hStatements: [
+          "H271: May cause fire or explosion; strong oxidizer.",
+          "H302: Harmful if swallowed.",
+          "H314: Causes severe skin burns."
+        ],
+        pStatements: [
+          "P210: Keep away from heat/sparks.",
+          "P221: Take any precaution to avoid mixing with combustibles."
+        ]
+      },
+      {
+        id: "ammonia",
+        name: "Ammonia (Anhydrous / Conc. Aq)",
+        formula: "NH3",
+        cas: "7664-41-7",
+        category: "base_toxic_gas",
+        bp: "-33.3 °C",
+        flash: "132.0 °C (Gas)",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 1, r: 0, s: "" },
+        pictograms: ["corrosion", "skull", "environment"],
+        hStatements: [
+          "H314: Causes severe skin burns and eye damage.",
+          "H331: Toxic if inhaled.",
+          "H400: Very toxic to aquatic life."
+        ],
+        pStatements: [
+          "P260: Do not breathe gas/mist.",
+          "P273: Avoid release to the environment."
+        ]
+      },
+      {
+        id: "hexane",
+        name: "n-Hexane",
+        formula: "C6H14",
+        cas: "110-54-3",
+        category: "organic_solvent",
+        bp: "68.7 °C",
+        flash: "-22.0 °C",
+        signal: "DANGER",
+        nfpa: { h: 2, f: 3, r: 0, s: "" },
+        pictograms: ["flame", "health", "environment"],
+        hStatements: [
+          "H225: Highly flammable liquid and vapor.",
+          "H304: May be fatal if swallowed and enters airways.",
+          "H361f: Suspected of damaging fertility."
+        ],
+        pStatements: [
+          "P210: Keep away from ignition sources.",
+          "P273: Avoid release to environment."
+        ]
+      },
+      {
+        id: "diethyl_ether",
+        name: "Diethyl Ether",
+        formula: "C4H10O",
+        cas: "60-29-7",
+        category: "organic_solvent",
+        bp: "34.6 °C",
+        flash: "-45.0 °C",
+        signal: "DANGER",
+        nfpa: { h: 1, f: 4, r: 1, s: "" },
+        pictograms: ["flame", "exclamation"],
+        hStatements: [
+          "H224: Extremely flammable liquid and vapor.",
+          "H302: Harmful if swallowed.",
+          "EUH019: May form explosive peroxides."
+        ],
+        pStatements: [
+          "P210: Keep away from sparks/hot surfaces. - No smoking."
+        ]
+      },
+      {
+        id: "chlorine",
+        name: "Chlorine Gas",
+        formula: "Cl2",
+        cas: "7782-50-5",
+        category: "oxidizer_toxic_gas",
+        bp: "-34.04 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 4, f: 0, r: 0, s: "OX" },
+        pictograms: ["gas_cylinder", "skull", "corrosion", "environment"],
+        hStatements: [
+          "H280: Contains gas under pressure.",
+          "H330: Fatal if inhaled.",
+          "H314: Causes severe skin burns."
+        ],
+        pStatements: [
+          "P260: Do not breathe gas.",
+          "P284: Wear respiratory protection."
+        ]
+      },
+      {
+        id: "sodium_hypochlorite",
+        name: "Sodium Hypochlorite (Bleach 12%)",
+        formula: "NaOCl",
+        cas: "7681-52-9",
+        category: "oxidizer_base",
+        bp: "101.0 °C",
+        flash: "Non-combustible",
+        signal: "DANGER",
+        nfpa: { h: 3, f: 0, r: 1, s: "" },
+        pictograms: ["corrosion", "environment"],
+        hStatements: [
+          "H314: Causes severe skin burns and eye damage.",
+          "EUH031: Contact with acids liberates toxic chlorine gas.",
+          "H400: Very toxic to aquatic life."
+        ],
+        pStatements: [
+          "P273: Avoid release to the environment.",
+          "P280: Wear protective gloves and eye protection."
+        ]
+      },
+      {
+        id: "water",
+        name: "Water (Deionized/Process)",
+        formula: "H2O",
+        cas: "7732-18-5",
+        category: "neutral",
+        bp: "100.0 °C",
+        flash: "None",
+        signal: "SAFE",
+        nfpa: { h: 0, f: 0, r: 0, s: "" },
+        pictograms: [],
+        hStatements: ["Not classified as a hazardous chemical."],
+        pStatements: ["P102: Keep out of reach of children (industrial grade)."]
+      }
+    ];
+
+    /* ==========================================================================
+       TAB CONTROLLER & NAVIGATION
+       ========================================================================== */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-300');
+      });
+
+      const selectedContent = document.getElementById(`tab-${tabId}`);
+      const selectedBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (selectedContent) selectedContent.classList.remove('hidden');
+      if (selectedBtn) {
+        selectedBtn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+        selectedBtn.classList.remove('text-slate-300');
+      }
+
+      if (tabId === 'distillation') {
+        setTimeout(updateDistillation, 50);
+      } else if (tabId === 'heatex') {
+        setTimeout(updateHeatExchanger, 50);
+      }
+    }
+
+    function showStatusAlert(msg) {
+      const banner = document.getElementById('status-banner');
+      const text = document.getElementById('status-banner-text');
+      text.textContent = msg;
+      banner.classList.remove('hidden');
+    }
+
+    function hideStatusAlert() {
+      const banner = document.getElementById('status-banner');
+      banner.classList.add('hidden');
+    }
+
+    /* ==========================================================================
+       MODULE 1: McCABE-THIELE DISTILLATION SOLVER & GRAPHICS
+       ========================================================================== */
+    let distillCache = {};
+
+    function applyDistillPreset() {
+      const p = document.getElementById('distill-preset').value;
+      if (p === 'benzene-toluene') {
+        document.getElementById('input-alpha').value = 2.45;
+        document.getElementById('input-zf').value = 0.50;
+        document.getElementById('input-xd').value = 0.95;
+        document.getElementById('input-xb').value = 0.05;
+        document.getElementById('input-reflux').value = 1.80;
+        document.getElementById('input-q').value = 1.0;
+      } else if (p === 'acetone-water') {
+        document.getElementById('input-alpha').value = 3.60;
+        document.getElementById('input-zf').value = 0.40;
+        document.getElementById('input-xd').value = 0.92;
+        document.getElementById('input-xb').value = 0.04;
+        document.getElementById('input-reflux').value = 1.40;
+        document.getElementById('input-q').value = 0.85;
+      } else if (p === 'heptane-octane') {
+        document.getElementById('input-alpha').value = 2.15;
+        document.getElementById('input-zf').value = 0.55;
+        document.getElementById('input-xd').value = 0.96;
+        document.getElementById('input-xb').value = 0.08;
+        document.getElementById('input-reflux').value = 2.20;
+        document.getElementById('input-q').value = 1.0;
+      } else if (p === 'ethanol-water-ideal') {
+        document.getElementById('input-alpha').value = 1.95;
+        document.getElementById('input-zf').value = 0.35;
+        document.getElementById('input-xd').value = 0.88;
+        document.getElementById('input-xb').value = 0.02;
+        document.getElementById('input-reflux').value = 2.80;
+        document.getElementById('input-q').value = 1.1;
+      }
+      updateDistillation();
+    }
+
+    function eqY(x, alpha) {
+      return (alpha * x) / (1 + (alpha - 1) * x);
+    }
+
+    function eqX(y, alpha) {
+      // inverse equilibrium
+      return y / (alpha - (alpha - 1) * y);
+    }
+
+    function updateDistillation() {
+      // Parse inputs
+      const alpha = parseFloat(document.getElementById('input-alpha').value);
+      const zF = parseFloat(document.getElementById('input-zf').value);
+      let xD = parseFloat(document.getElementById('input-xd').value);
+      let xB = parseFloat(document.getElementById('input-xb').value);
+      const R = parseFloat(document.getElementById('input-reflux').value);
+      const q = parseFloat(document.getElementById('input-q').value);
+      const F = parseFloat(document.getElementById('input-f').value) || 100;
+
+      // Sanitization: Ensure xD > zF > xB
+      if (xD <= zF + 0.01) xD = Math.min(0.99, zF + 0.02);
+      if (xB >= zF - 0.01) xB = Math.max(0.01, zF - 0.02);
+
+      // Update Labels
+      document.getElementById('val-alpha').textContent = alpha.toFixed(2);
+      document.getElementById('val-zf').textContent = zF.toFixed(2);
+      document.getElementById('val-xd').textContent = xD.toFixed(2);
+      document.getElementById('val-xb').textContent = xB.toFixed(2);
+      document.getElementById('val-reflux').textContent = R.toFixed(2);
+      document.getElementById('val-q').textContent = q.toFixed(2);
+
+      // Label feed condition
+      const qLabel = document.getElementById('q-label');
+      if (Math.abs(q - 1.0) < 0.01) qLabel.textContent = "1.0 (Saturated Liquid)";
+      else if (Math.abs(q - 0.0) < 0.01) qLabel.textContent = "0.0 (Saturated Vapor)";
+      else if (q > 1.0) qLabel.textContent = `${q.toFixed(2)} (Subcooled Liquid)`;
+      else if (q > 0.0 && q < 1.0) qLabel.textContent = `${q.toFixed(2)} (Two-Phase Mixture)`;
+      else qLabel.textContent = `${q.toFixed(2)} (Superheated Vapor)`;
+
+      // Overall mass balance: F = D + B, F*zF = D*xD + B*xB
+      const D = F * (zF - xB) / (xD - xB);
+      const B = F - D;
+
+      // 1. Calculate Minimum Reflux Ratio Rmin by finding intersection of q-line with equilibrium curve
+      let x_pinch, y_pinch;
+      if (Math.abs(q - 1.0) < 0.001) {
+        x_pinch = zF;
+        y_pinch = eqY(zF, alpha);
+      } else {
+        // q-line: y = [q/(q-1)]*x - zF/(q-1)
+        // Equilibrium: y = alpha*x / (1 + (alpha-1)*x)
+        // Solve quadratic for x: (alpha-1)*[q/(q-1)]*x^2 + ...
+        const m = q / (q - 1);
+        const c = -zF / (q - 1);
+        // m*x + c = alpha*x / (1 + (alpha-1)*x)
+        // (m*x + c)(1 + (alpha-1)x) = alpha*x
+        const a_quad = m * (alpha - 1);
+        const b_quad = m + c * (alpha - 1) - alpha;
+        const c_quad = c;
+        const disc = b_quad * b_quad - 4 * a_quad * c_quad;
+        if (disc >= 0) {
+          const root1 = (-b_quad + Math.sqrt(disc)) / (2 * a_quad);
+          const root2 = (-b_quad - Math.sqrt(disc)) / (2 * a_quad);
+          x_pinch = (root1 >= 0 && root1 <= 1) ? root1 : root2;
+          y_pinch = eqY(x_pinch, alpha);
+        } else {
+          x_pinch = zF;
+          y_pinch = eqY(zF, alpha);
+        }
+      }
+
+      // Rmin is slope of line from (xD, xD) to pinch (x_pinch, y_pinch)
+      // slope_min = (xD - y_pinch) / (xD - x_pinch) = Rmin / (Rmin + 1)
+      const slope_min = (xD - y_pinch) / (xD - x_pinch);
+      let Rmin = slope_min / (1 - slope_min);
+      if (Rmin < 0 || isNaN(Rmin)) Rmin = 0.5;
+
+      document.getElementById('val-rmin').textContent = Rmin.toFixed(2);
+      const rRatio = R / Rmin;
+      document.getElementById('val-rmult').textContent = `${rRatio.toFixed(2)}x`;
+
+      if (R < Rmin) {
+        showStatusAlert(`Selected Reflux Ratio R (${R.toFixed(2)}) is BELOW Rmin (${Rmin.toFixed(2)}). Separation requires infinite stages!`);
+      } else {
+        hideStatusAlert();
+      }
+
+      // 2. Intersection of Rectifying Line (ROL) and q-line: (x_int, y_int)
+      // ROL: y = (R / (R + 1)) * x + (xD / (R + 1))
+      const m_rol = R / (R + 1);
+      const c_rol = xD / (R + 1);
+
+      let x_int, y_int;
+      if (Math.abs(q - 1.0) < 0.001) {
+        x_int = zF;
+        y_int = m_rol * zF + c_rol;
+      } else {
+        const m_q = q / (q - 1);
+        const c_q = -zF / (q - 1);
+        x_int = (c_q - c_rol) / (m_rol - m_q);
+        y_int = m_rol * x_int + c_rol;
+      }
+
+      // Stripping line (SOL) joins (xB, xB) and (x_int, y_int)
+      const m_sol = (y_int - xB) / (x_int - xB);
+      const c_sol = xB - m_sol * xB;
+
+      // 3. Step off Theoretical Stages (Starting from xD down to xB)
+      const stages = [];
+      let currentX = xD;
+      let currentY = xD;
+      let stageCount = 0;
+      let feedStage = 1;
+      const MAX_STAGES = 50;
+
+      while (currentX > xB && stageCount < MAX_STAGES) {
+        stageCount++;
+        // Horizontal step to equilibrium curve: y remains currentY, find x_eq
+        const x_eq = eqX(currentY, alpha);
+        stages.push({
+          x1: currentX,
+          y1: currentY,
+          x2: x_eq,
+          y2: currentY,
+          stageNum: stageCount
+        });
+
+        if (x_eq <= x_int && feedStage === 1 && stageCount > 1) {
+          feedStage = stageCount;
+        }
+
+        // Vertical step down to operating line:
+        let nextY;
+        if (x_eq > x_int) {
+          // On ROL
+          nextY = m_rol * x_eq + c_rol;
+        } else {
+          // On SOL
+          nextY = m_sol * x_eq + c_sol;
+        }
+
+        stages.push({
+          x1: x_eq,
+          y1: currentY,
+          x2: x_eq,
+          y2: nextY,
+          stageNum: stageCount
+        });
+
+        currentX = x_eq;
+        currentY = nextY;
+
+        if (currentX <= xB) break;
+      }
+
+      // Fractional stage interpolation
+      let exactStages = stageCount;
+      if (stageCount >= MAX_STAGES) {
+        exactStages = "> 50 (Pinch limit)";
+      }
+
+      // Update UI metrics
+      document.getElementById('metric-stages').textContent = typeof exactStages === 'number' ? exactStages : exactStages;
+      document.getElementById('metric-feed-stage').textContent = `Stage #${feedStage}`;
+      document.getElementById('metric-d-flow').textContent = D.toFixed(1);
+      document.getElementById('metric-b-flow').textContent = B.toFixed(1);
+      document.getElementById('stat-stage-badge').textContent = `${stageCount} Theoretical Plates`;
+
+      // Cache values for export report
+      distillCache = {
+        alpha, zF, xD, xB, R, q, Rmin, D, B,
+        totalStages: stageCount,
+        feedStage,
+        stagesList: stages,
+        x_int, y_int, m_rol, c_rol, m_sol, c_sol
+      };
+
+      // Draw onto Canvas
+      renderMcCabeCanvas(distillCache);
+    }
+
+    function renderMcCabeCanvas(data) {
+      const canvas = document.getElementById('mccabe-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      
+      const rect = canvas.getBoundingClientRect();
+      const size = Math.min(rect.width, rect.height) || 440;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+
+      // Clear Canvas
+      ctx.fillStyle = '#050914';
+      ctx.fillRect(0, 0, size, size);
+
+      // Coordinates mapping: Margin of 45px around
+      const pad = 42;
+      const graphW = size - 2 * pad;
+      const graphH = size - 2 * pad;
+
+      function toScreenX(x) { return pad + x * graphW; }
+      function toScreenY(y) { return pad + (1 - y) * graphH; }
+
+      // 1. Grid lines
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i <= 10; i++) {
+        const val = i / 10;
+        // Verticals
+        ctx.moveTo(toScreenX(val), toScreenY(0));
+        ctx.lineTo(toScreenX(val), toScreenY(1));
+        // Horizontals
+        ctx.moveTo(toScreenX(0), toScreenY(val));
+        ctx.lineTo(toScreenX(1), toScreenY(val));
+      }
+      ctx.stroke();
+
+      // Axis labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px JetBrains Mono';
+      for (let i = 0; i <= 10; i += 2) {
+        const val = (i / 10).toFixed(1);
+        ctx.fillText(val, toScreenX(i/10) - 8, toScreenY(0) + 16);
+        ctx.fillText(val, toScreenX(0) - 28, toScreenY(i/10) + 4);
+      }
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText("Liquid Mole Fraction x", size / 2 - 50, size - 10);
+      ctx.save();
+      ctx.translate(14, size / 2 + 50);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("Vapor Mole Fraction y", 0, 0);
+      ctx.restore();
+
+      // 2. Diagonal 45-degree line (y = x)
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(0), toScreenY(0));
+      ctx.lineTo(toScreenX(1), toScreenY(1));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 3. Equilibrium Curve
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const x = i / 100;
+        const y = eqY(x, data.alpha);
+        if (i === 0) ctx.moveTo(toScreenX(x), toScreenY(y));
+        else ctx.lineTo(toScreenX(x), toScreenY(y));
+      }
+      ctx.stroke();
+
+      // 4. q-line (Feed line)
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(data.zF), toScreenY(data.zF));
+      ctx.lineTo(toScreenX(data.x_int), toScreenY(data.y_int));
+      ctx.stroke();
+
+      // 5. Rectifying Operating Line (ROL)
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(data.xD), toScreenY(data.xD));
+      ctx.lineTo(toScreenX(data.x_int), toScreenY(data.y_int));
+      ctx.stroke();
+
+      // 6. Stripping Operating Line (SOL)
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(data.xB), toScreenY(data.xB));
+      ctx.lineTo(toScreenX(data.x_int), toScreenY(data.y_int));
+      ctx.stroke();
+
+      // 7. Stepped Stages
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      data.stagesList.forEach(seg => {
+        ctx.moveTo(toScreenX(seg.x1), toScreenY(seg.y1));
+        ctx.lineTo(toScreenX(seg.x2), toScreenY(seg.y2));
+      });
+      ctx.stroke();
+
+      // Stage numbering markers on canvas
+      ctx.fillStyle = '#34d399';
+      ctx.font = '9px JetBrains Mono';
+      data.stagesList.forEach((seg, idx) => {
+        // Label on horizontal steps
+        if (idx % 2 === 0 && seg.stageNum <= 15) {
+          ctx.fillText(`S${seg.stageNum}`, toScreenX(seg.x2) + 2, toScreenY(seg.y2) - 4);
+        }
+      });
+
+      // Key Points Highlight Dots
+      const points = [
+        { x: data.xD, y: data.xD, color: '#c084fc', label: 'xD' },
+        { x: data.xB, y: data.xB, color: '#22d3ee', label: 'xB' },
+        { x: data.zF, y: data.zF, color: '#f59e0b', label: 'zF' },
+        { x: data.x_int, y: data.y_int, color: '#ef4444', label: 'Feed Int' }
+      ];
+
+      points.forEach(pt => {
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(toScreenX(pt.x), toScreenY(pt.y), 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+    }
+
+    /* ==========================================================================
+       MODULE 2: HEAT EXCHANGER (LMTD & PROFILE ENGINE)
+       ========================================================================== */
+    let exchangerFlow = 'counter'; // 'counter' or 'cocurrent'
+    let heatExCache = {};
+
+    function setExchangerFlow(type) {
+      exchangerFlow = type;
+      const btnCounter = document.getElementById('btn-flow-counter');
+      const btnCo = document.getElementById('btn-flow-cocurrent');
+      if (type === 'counter') {
+        btnCounter.className = "px-3 py-1 rounded-lg font-medium bg-brand-600 text-white";
+        btnCo.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
+      } else {
+        btnCo.className = "px-3 py-1 rounded-lg font-medium bg-brand-600 text-white";
+        btnCounter.className = "px-3 py-1 rounded-lg font-medium text-slate-400 hover:text-white";
+      }
+      updateHeatExchanger();
+    }
+
+    function applyFluidPreset(stream) {
+      if (stream === 'hot') {
+        const val = document.getElementById('preset-hot-fluid').value;
+        const cpInput = document.getElementById('cph-val');
+        if (val === 'water') cpInput.value = 4.18;
+        else if (val === 'oil') cpInput.value = 2.10;
+        else if (val === 'glycol') cpInput.value = 2.50;
+      } else {
+        const val = document.getElementById('preset-cold-fluid').value;
+        const cpInput = document.getElementById('cpc-val');
+        if (val === 'water') cpInput.value = 4.18;
+        else if (val === 'glycol') cpInput.value = 3.40;
+      }
+      updateHeatExchanger();
+    }
+
+    function autoBalanceColdOutlet() {
+      // Balance energy: Q = mh * Cph * (Th_in - Th_out) = mc * Cpc * (Tc_out - Tc_in)
+      const Th_in = parseFloat(document.getElementById('th-in').value);
+      const Th_out = parseFloat(document.getElementById('th-out').value);
+      const mh = parseFloat(document.getElementById('mh-flow').value);
+      const Cph = parseFloat(document.getElementById('cph-val').value);
+      const mc = parseFloat(document.getElementById('mc-flow').value);
+      const Cpc = parseFloat(document.getElementById('cpc-val').value);
+      const Tc_in = parseFloat(document.getElementById('tc-in').value);
+
+      const Q = mh * Cph * (Th_in - Th_out); // in kW
+      const calculatedTcOut = Tc_in + (Q / (mc * Cpc));
+      document.getElementById('tc-out').value = calculatedTcOut.toFixed(1);
+      updateHeatExchanger();
+    }
+
+    function calculateFTEMA12(P, R) {
+      // Standard Bowman correction factor equation for 1 Shell - 2 Tube passes
+      if (R === 1.0) {
+        const term = (P * Math.sqrt(2)) / (1 - P);
+        const numerator = Math.sqrt(2) * (1 - P) / P;
+        // approximation
+        return 0.95;
+      }
+      const denom = (1 - P) / (1 - P * R);
+      if (denom <= 0 || (2 - P * (R + 1 - Math.sqrt(R*R + 1))) <= 0) return 0.85;
+
+      const sqrtR = Math.sqrt(R * R + 1);
+      const numF = (sqrtR / (R - 1)) * Math.log((1 - P) / (1 - P * R));
+      const denF = Math.log((2 - P * (R + 1 - sqrtR)) / (2 - P * (R + 1 + sqrtR)));
+
+      let F = numF / denF;
+      if (isNaN(F) || F <= 0 || F > 1.0) F = 0.82;
+      return Math.min(1.0, Math.max(0.4, F));
+    }
+
+    function updateHeatExchanger() {
+      const Th_in = parseFloat(document.getElementById('th-in').value);
+      const Th_out = parseFloat(document.getElementById('th-out').value);
+      const mh = parseFloat(document.getElementById('mh-flow').value);
+      const Cph = parseFloat(document.getElementById('cph-val').value);
+
+      const Tc_in = parseFloat(document.getElementById('tc-in').value);
+      const Tc_out = parseFloat(document.getElementById('tc-out').value);
+      const mc = parseFloat(document.getElementById('mc-flow').value);
+      const Cpc = parseFloat(document.getElementById('cpc-val').value);
+
+      const U = parseFloat(document.getElementById('input-u').value);
+      document.getElementById('val-u-label').textContent = U;
+
+      const config = document.getElementById('exchanger-type').value;
+
+      // 1. Calculate Heat Duties
+      const Qh = mh * Cph * (Th_in - Th_out); // kW
+      const Qc = mc * Cpc * (Tc_out - Tc_in); // kW
+      const Q_avg = (Qh + Qc) / 2; // Average duty
+
+      // 2. Temperature Differences deltaT1 and deltaT2
+      let dT1, dT2;
+      if (exchangerFlow === 'counter') {
+        dT1 = Th_in - Tc_out;
+        dT2 = Th_out - Tc_in;
+      } else {
+        dT1 = Th_in - Tc_in;
+        dT2 = Th_out - Tc_out;
+      }
+
+      // Check for Temperature Crossing
+      const crossBadge = document.getElementById('badge-temp-cross');
+      if (dT1 <= 0 || dT2 <= 0) {
+        crossBadge.classList.remove('hidden');
+      } else {
+        crossBadge.classList.add('hidden');
+      }
+
+      // 3. LMTD Calculation
+      let LMTD = 0;
+      const abs_dT1 = Math.max(0.1, dT1);
+      const abs_dT2 = Math.max(0.1, dT2);
+
+      if (Math.abs(abs_dT1 - abs_dT2) < 0.1) {
+        LMTD = abs_dT1;
+      } else {
+        LMTD = (abs_dT1 - abs_dT2) / Math.log(abs_dT1 / abs_dT2);
+      }
+
+      // 4. Correction Factor F
+      let F_factor = 1.0;
+      if (config !== '1-1') {
+        // P = thermal effectiveness of cold fluid = (Tc_out - Tc_in) / (Th_in - Tc_in)
+        // R = heat capacity ratio = (Th_in - Th_out) / (Tc_out - Tc_in)
+        const P = Math.min(0.98, Math.max(0.01, (Tc_out - Tc_in) / (Th_in - Tc_in)));
+        const R_cap = (Th_in - Th_out) / Math.max(0.01, (Tc_out - Tc_in));
+        F_factor = calculateFTEMA12(P, R_cap);
+      }
+
+      // 5. Heat Transfer Area A = Q / (U * F * LMTD)
+      // Q in Watts = Q_avg * 1000
+      const Q_watts = Math.max(0, Q_avg * 1000);
+      const Area = Q_watts / (U * F_factor * Math.max(0.5, LMTD)); // in m²
+
+      // 6. Tube estimation: 19.05 mm (3/4") OD, length 4m => per tube area = pi * 0.01905 * 4 = 0.2394 m²
+      const singleTubeArea = Math.PI * 0.01905 * 4.0;
+      const numTubes = Math.max(4, Math.ceil(Area / singleTubeArea));
+      // Shell diameter approximation (triangular pitch)
+      const shellDiameter = (Math.sqrt(numTubes / 0.3) * 0.0238).toFixed(2);
+
+      // Effectiveness epsilon
+      const C_min = Math.min(mh * Cph, mc * Cpc);
+      const Q_max = C_min * (Th_in - Tc_in);
+      const effectiveness = (Q_avg / Math.max(0.1, Q_max)) * 100;
+
+      // Update UI metrics
+      document.getElementById('metric-heat-duty').textContent = Q_avg.toFixed(1);
+      document.getElementById('metric-lmtd').textContent = LMTD.toFixed(1);
+      document.getElementById('metric-f-factor').textContent = F_factor.toFixed(3);
+      document.getElementById('metric-area').textContent = Area.toFixed(2);
+      document.getElementById('metric-tube-count').textContent = `${numTubes} tubes`;
+      document.getElementById('metric-effectiveness').textContent = `${Math.min(100, effectiveness).toFixed(1)} %`;
+      document.getElementById('metric-shell-diam').textContent = `~ ${shellDiameter} m`;
+
+      // Cache for report
+      heatExCache = {
+        Th_in, Th_out, Tc_in, Tc_out, mh, mc, Cph, Cpc, U, config,
+        flow: exchangerFlow, Q_avg, LMTD, F_factor, Area, numTubes, effectiveness
+      };
+
+      // Draw SVG Profile
+      renderExchangerSVG(heatExCache);
+    }
+
+    function renderExchangerSVG(data) {
+      const svg = document.getElementById('heatex-svg');
+      if (!svg) return;
+
+      const w = 600;
+      const h = 240;
+      const padX = 70;
+      const padY = 35;
+      const plotW = w - 2 * padX;
+      const plotH = h - 2 * padY;
+
+      const maxT = Math.max(data.Th_in, data.Tc_out, 100) + 10;
+      const minT = Math.max(0, Math.min(data.Th_out, data.Tc_in, 0) - 10);
+
+      function tempY(t) {
+        return padY + (1 - (t - minT) / (maxT - minT)) * plotH;
+      }
+
+      // Points for hot curve
+      const hotStart = { x: padX, y: tempY(data.Th_in) };
+      const hotEnd = { x: padX + plotW, y: tempY(data.Th_out) };
+
+      // Points for cold curve
+      let coldStart, coldEnd;
+      if (data.flow === 'counter') {
+        coldStart = { x: padX, y: tempY(data.Tc_out) };
+        coldEnd = { x: padX + plotW, y: tempY(data.Tc_in) };
+      } else {
+        coldStart = { x: padX, y: tempY(data.Tc_in) };
+        coldEnd = { x: padX + plotW, y: tempY(data.Tc_out) };
+      }
+
+      svg.innerHTML = `
+        <!-- Background Grid -->
+        <line x1="${padX}" y1="${padY}" x2="${padX}" y2="${padY + plotH}" stroke="#1e293b" stroke-width="1.5" />
+        <line x1="${padX}" y1="${padY + plotH}" x2="${padX + plotW}" y2="${padY + plotH}" stroke="#1e293b" stroke-width="1.5" />
+        <line x1="${padX + plotW}" y1="${padY}" x2="${padX + plotW}" y2="${padY + plotH}" stroke="#1e293b" stroke-dasharray="3,3" />
+
+        <!-- Shell Outline Decorative Box -->
+        <rect x="${padX}" y="${padY}" width="${plotW}" height="${plotH}" fill="#0f172a" fill-opacity="0.3" rx="8" stroke="#334155" stroke-width="1"/>
+
+        <!-- Hot Stream Path (Red) -->
+        <path d="M ${hotStart.x} ${hotStart.y} C ${padX + plotW * 0.4} ${hotStart.y + (hotEnd.y - hotStart.y) * 0.45}, ${padX + plotW * 0.6} ${hotStart.y + (hotEnd.y - hotStart.y) * 0.65}, ${hotEnd.x} ${hotEnd.y}" 
+              fill="none" stroke="#ef4444" stroke-width="3" />
+        
+        <!-- Cold Stream Path (Blue) -->
+        <path d="M ${coldStart.x} ${coldStart.y} C ${padX + plotW * 0.4} ${coldStart.y + (coldEnd.y - coldStart.y) * 0.45}, ${padX + plotW * 0.6} ${coldStart.y + (coldEnd.y - coldStart.y) * 0.65}, ${coldEnd.x} ${coldEnd.y}" 
+              fill="none" stroke="#38bdf8" stroke-width="3" />
+
+        <!-- Hot Stream Terminals -->
+        <circle cx="${hotStart.x}" cy="${hotStart.y}" r="5" fill="#ef4444" />
+        <circle cx="${hotEnd.x}" cy="${hotEnd.y}" r="5" fill="#ef4444" />
+
+        <!-- Cold Stream Terminals -->
+        <circle cx="${coldStart.x}" cy="${coldStart.y}" r="5" fill="#38bdf8" />
+        <circle cx="${coldEnd.x}" cy="${coldEnd.y}" r="5" fill="#38bdf8" />
+
+        <!-- Text Labels -->
+        <text x="${hotStart.x - 10}" y="${hotStart.y + 4}" fill="#ef4444" font-size="11" font-family="JetBrains Mono" text-anchor="end" font-weight="bold">Th,in ${data.Th_in}°C</text>
+        <text x="${hotEnd.x + 10}" y="${hotEnd.y + 4}" fill="#ef4444" font-size="11" font-family="JetBrains Mono" font-weight="bold">Th,out ${data.Th_out}°C</text>
+
+        <text x="${coldStart.x - 10}" y="${coldStart.y + 4}" fill="#38bdf8" font-size="11" font-family="JetBrains Mono" text-anchor="end" font-weight="bold">${data.flow === 'counter' ? 'Tc,out ' + data.Tc_out : 'Tc,in ' + data.Tc_in}°C</text>
+        <text x="${coldEnd.x + 10}" y="${coldEnd.y + 4}" fill="#38bdf8" font-size="11" font-family="JetBrains Mono" font-weight="bold">${data.flow === 'counter' ? 'Tc,in ' + data.Tc_in : 'Tc,out ' + data.Tc_out}°C</text>
+
+        <!-- Length Arrow -->
+        <line x1="${padX}" y1="${padY + plotH + 18}" x2="${padX + plotW}" y2="${padY + plotH + 18}" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)" />
+        <text x="${w / 2}" y="${padY + plotH + 28}" fill="#94a3b8" font-size="10" font-family="Inter" text-anchor="middle">Heat Exchanger Length (0 &rarr; L)</text>
+      `;
+    }
+
+    /* ==========================================================================
+       MODULE 3: SAFETY & GHS REACTIVITY MATRIX
+       ========================================================================== */
+    function initChemicalModule() {
+      const select1 = document.getElementById('select-primary-chem');
+      const mix1 = document.getElementById('mix-chem-1');
+      const mix2 = document.getElementById('mix-chem-2');
+
+      select1.innerHTML = '';
+      mix1.innerHTML = '';
+      mix2.innerHTML = '';
+
+      CHEMICALS_DB.forEach((chem, idx) => {
+        const opt1 = document.createElement('option');
+        opt1.value = chem.id;
+        opt1.textContent = `${chem.name} (${chem.formula})`;
+        select1.appendChild(opt1);
+
+        const optMix1 = document.createElement('option');
+        optMix1.value = chem.id;
+        optMix1.textContent = `${chem.name}`;
+        mix1.appendChild(optMix1);
+
+        const optMix2 = document.createElement('option');
+        optMix2.value = chem.id;
+        optMix2.textContent = `${chem.name}`;
+        mix2.appendChild(optMix2);
+      });
+
+      // Default mix selection: Sulfuric Acid + Sodium Hydroxide for demo
+      mix1.value = "sulfuric_acid";
+      mix2.value = "sodium_hydroxide";
+
+      renderSelectedChemical();
+      evaluateCompatibility();
+    }
+
+    function filterChemicalSelect() {
+      const query = document.getElementById('chemical-search').value.toLowerCase();
+      const select1 = document.getElementById('select-primary-chem');
+      const match = CHEMICALS_DB.find(c => c.name.toLowerCase().includes(query) || c.formula.toLowerCase().includes(query) || c.cas.includes(query));
+      if (match) {
+        select1.value = match.id;
+        renderSelectedChemical();
+      }
+    }
+
+    function renderSelectedChemical() {
+      const id = document.getElementById('select-primary-chem').value;
+      const chem = CHEMICALS_DB.find(c => c.id === id);
+      if (!chem) return;
+
+      document.getElementById('chem-formula').textContent = chem.formula;
+      document.getElementById('chem-cas').textContent = chem.cas;
+      document.getElementById('chem-bp').textContent = chem.bp;
+      document.getElementById('chem-flash').textContent = chem.flash;
+
+      // Signal word
+      const signalBadge = document.getElementById('chem-signal-badge');
+      signalBadge.textContent = chem.signal;
+      if (chem.signal === 'DANGER') {
+        signalBadge.className = "px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-red-500/20 text-red-400 border border-red-500/40";
+      } else if (chem.signal === 'WARNING') {
+        signalBadge.className = "px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-amber-500/20 text-amber-400 border border-amber-500/40";
+      } else {
+        signalBadge.className = "px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+      }
+
+      // NFPA Diamond values
+      document.getElementById('nfpa-health').textContent = chem.nfpa.h;
+      document.getElementById('nfpa-flammability').textContent = chem.nfpa.f;
+      document.getElementById('nfpa-instability').textContent = chem.nfpa.r;
+      document.getElementById('nfpa-special').textContent = chem.nfpa.s || '--';
+
+      // NFPA Descriptions
+      const healthDesc = ["Normal Material", "Slightly Hazardous", "Hazardous", "Extreme Danger", "Deadly"];
+      const flamDesc = ["Will not burn", "Flash point > 93°C", "Flash point < 93°C", "Flash point < 38°C", "Flash point < 23°C (Extreme)"];
+      const reactDesc = ["Stable", "Unstable if heated", "Violent chemical change", "Shock and heat may detonate", "May detonate easily"];
+
+      document.getElementById('nfpa-desc-health').textContent = healthDesc[chem.nfpa.h] || "Unknown";
+      document.getElementById('nfpa-desc-flam').textContent = flamDesc[chem.nfpa.f] || "Unknown";
+      document.getElementById('nfpa-desc-react').textContent = reactDesc[chem.nfpa.r] || "Unknown";
+      document.getElementById('nfpa-desc-spec').textContent = chem.nfpa.s === 'W' ? 'Reacts with Water (No Water)' : (chem.nfpa.s === 'OX' ? 'Strong Oxidizer' : 'None');
+
+      // Pictograms Rendering (SVG diamonds)
+      const pictoDiv = document.getElementById('ghs-pictograms');
+      pictoDiv.innerHTML = '';
+      if (chem.pictograms.length === 0) {
+        pictoDiv.innerHTML = `<span class="text-xs text-slate-500">No GHS Hazard Pictograms (Non-regulated)</span>`;
+      } else {
+        chem.pictograms.forEach(pic => {
+          const badge = document.createElement('div');
+          badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-950/30 border border-red-500/40 text-red-300 text-xs font-medium";
+          badge.innerHTML = `<i data-lucide="${getLucideForPicto(pic)}" class="w-4 h-4 text-red-400"></i> ${formatPictoName(pic)}`;
+          pictoDiv.appendChild(badge);
+        });
+      }
+
+      // H and P statements
+      const hList = document.getElementById('chem-h-statements');
+      const pList = document.getElementById('chem-p-statements');
+      hList.innerHTML = chem.hStatements.map(h => `<div class="py-0.5">• ${h}</div>`).join('');
+      pList.innerHTML = chem.pStatements.map(p => `<div class="py-0.5">• ${p}</div>`).join('');
+
+      lucide.createIcons();
+    }
+
+    function getLucideForPicto(name) {
+      if (name === 'flame') return 'flame';
+      if (name === 'corrosion') return 'droplets';
+      if (name === 'skull') return 'skull';
+      if (name === 'health') return 'activity';
+      if (name === 'environment') return 'trees';
+      if (name === 'flame_over_circle') return 'sun';
+      return 'alert-triangle';
+    }
+
+    function formatPictoName(name) {
+      return name.replace(/_/g, ' ').toUpperCase();
+    }
+
+    function evaluateCompatibility() {
+      const id1 = document.getElementById('mix-chem-1').value;
+      const id2 = document.getElementById('mix-chem-2').value;
+      const c1 = CHEMICALS_DB.find(c => c.id === id1);
+      const c2 = CHEMICALS_DB.find(c => c.id === id2);
+
+      const card = document.getElementById('compat-result-card');
+      const icon = document.getElementById('compat-icon');
+      const title = document.getElementById('compat-title');
+      const badge = document.getElementById('compat-badge');
+      const desc = document.getElementById('compat-explanation');
+      const tags = document.getElementById('compat-hazard-tags');
+
+      if (id1 === id2) {
+        card.className = "mt-4 p-4 rounded-xl border bg-slate-900/60 border-slate-700 text-slate-300";
+        icon.className = "p-2 rounded-lg bg-slate-800 text-slate-400";
+        icon.innerHTML = `<i data-lucide="check" class="w-5 h-5"></i>`;
+        title.textContent = "Identical Substance";
+        badge.className = "text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold bg-slate-800 text-slate-300";
+        badge.textContent = "NEUTRAL";
+        desc.textContent = `Both reagents are ${c1.name}. No chemical reaction occurs upon blending pure batches.`;
+        tags.innerHTML = '';
+        lucide.createIcons();
+        return;
+      }
+
+      // Reactivity Evaluation Matrix Logic
+      const isAcid1 = c1.category.includes('acid');
+      const isAcid2 = c2.category.includes('acid');
+      const isBase1 = c1.category.includes('base');
+      const isBase2 = c2.category.includes('base');
+      const isOx1 = c1.category.includes('oxidizer');
+      const isOx2 = c2.category.includes('oxidizer');
+      const isSolvent1 = c1.category.includes('organic');
+      const isSolvent2 = c2.category.includes('organic');
+
+      let severity = 'SAFE'; // 'DANGER', 'WARNING', 'SAFE'
+      let reason = '';
+      let tagList = [];
+
+      if ((isAcid1 && isBase2) || (isAcid2 && isBase1)) {
+        severity = 'DANGER';
+        reason = `CRITICAL EXOTHERMIC REACTION: Mixing strong acid (${isAcid1 ? c1.name : c2.name}) and strong base (${isBase1 ? c1.name : c2.name}) causes violent neutralization, rapid thermal expansion, boiling, and dangerous aerosol spattering.`;
+        tagList = ["Heat Generation", "Splattering Risk", "Corrosive Fumes"];
+      } else if ((isOx1 && isSolvent2) || (isOx2 && isSolvent1)) {
+        severity = 'DANGER';
+        reason = `EXPLOSION & RAPID DEFLAGRATION RISK: Strong oxidizer (${isOx1 ? c1.name : c2.name}) mixed with combustible organic solvent (${isSolvent1 ? c1.name : c2.name}) forms an unstable explosive mixture capable of spontaneous detonation upon contact or heating.`;
+        tagList = ["Fire Hazard", "Spontaneous Ignition", "Rapid Pressure Rise"];
+      } else if ((id1 === 'sulfuric_acid' && id2 === 'water') || (id1 === 'water' && id2 === 'sulfuric_acid')) {
+        severity = 'WARNING';
+        reason = `SEVERE EXOTHERMIC DILUTION: Concentrated H2SO4 has extreme hydration enthalpy. Always add ACID to WATER slowly with stirring, NEVER water to acid (violently boils water instantly, projecting concentrated acid).`;
+        tagList = ["Violent Boiling", "Thermal Shock", "Spattering"];
+      } else if ((id1 === 'sodium_hypochlorite' && isAcid2) || (id2 === 'sodium_hypochlorite' && isAcid1)) {
+        severity = 'DANGER';
+        reason = `TOXIC GAS RELEASE: Mixing hypochlorite bleach with acid releases lethal CHLORINE GAS (Cl2), inducing severe pulmonary edema, eye destruction, and death upon inhalation.`;
+        tagList = ["Lethal Gas Emission", "Respiratory Hazard", "OSHA Violation"];
+      } else if ((id1 === 'ammonia' && id2 === 'sodium_hypochlorite') || (id2 === 'ammonia' && id1 === 'sodium_hypochlorite')) {
+        severity = 'DANGER';
+        reason = `TOXIC / EXPLOSIVE BYPRODUCTS: Bleach and ammonia react to produce TOXIC CHLORAMINES and potentially explosive nitrogen trichloride (NCl3).`;
+        tagList = ["Chloramine Vapor", "Explosion Risk"];
+      } else if (isSolvent1 && isSolvent2) {
+        severity = 'WARNING';
+        reason = `MUTUAL SOLVATION / FLAMMABILITY: Both are organic solvents. While chemically compatible without spontaneous runaway, vapor pressure of the blend may increase flammability risks and electrostatic ignition hazards.`;
+        tagList = ["Vapor Accumulation", "Flammable Volatiles"];
+      } else {
+        severity = 'SAFE';
+        reason = `Compatible under standard ambient storage. No violent runaway reactivity identified between ${c1.name} and ${c2.name}. Standard PPE and containment protocols apply.`;
+        tagList = ["Non-Reactive Binary", "Standard Handling"];
+      }
+
+      // Apply styling based on severity
+      if (severity === 'DANGER') {
+        card.className = "mt-4 p-4 rounded-xl border bg-red-950/20 border-red-500/40 text-red-200";
+        icon.className = "p-2 rounded-lg bg-red-500/20 text-red-400";
+        icon.innerHTML = `<i data-lucide="skull" class="w-5 h-5"></i>`;
+        title.textContent = "INCOMPATIBLE: High Risk of Runaway Reaction";
+        title.className = "text-sm font-bold tracking-tight text-red-400";
+        badge.className = "text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold bg-red-500 text-white shadow-md shadow-red-500/30";
+        badge.textContent = "INCOMPATIBLE - DANGER";
+      } else if (severity === 'WARNING') {
+        card.className = "mt-4 p-4 rounded-xl border bg-amber-950/20 border-amber-500/40 text-amber-200";
+        icon.className = "p-2 rounded-lg bg-amber-500/20 text-amber-400";
+        icon.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5"></i>`;
+        title.textContent = "CAUTION: Restricted Operating Conditions";
+        title.className = "text-sm font-bold tracking-tight text-amber-400";
+        badge.className = "text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold bg-amber-500 text-black";
+        badge.textContent = "CAUTION";
+      } else {
+        card.className = "mt-4 p-4 rounded-xl border bg-emerald-950/20 border-emerald-500/40 text-emerald-200";
+        icon.className = "p-2 rounded-lg bg-emerald-500/20 text-emerald-400";
+        icon.innerHTML = `<i data-lucide="shield-check" class="w-5 h-5"></i>`;
+        title.textContent = "COMPATIBLE: No Dangerous Exotherm Detected";
+        title.className = "text-sm font-bold tracking-tight text-emerald-400";
+        badge.className = "text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        badge.textContent = "COMPATIBLE";
+      }
+
+      desc.textContent = reason;
+      tags.innerHTML = tagList.map(t => `<span class="px-2 py-0.5 rounded bg-black/40 text-[10px] font-mono border border-white/10">${t}</span>`).join('');
+      lucide.createIcons();
+    }
+
+    /* ==========================================================================
+       EXPORT & ENGINEERING SUMMARY MODAL
+       ========================================================================== */
+    function openReportModal() {
+      const modal = document.getElementById('report-modal');
+      const container = document.getElementById('report-modal-content');
+
+      const dateStr = new Date().toLocaleString();
+      container.innerHTML = `
+        <div class="border-b border-slate-700 pb-3">
+          <div class="text-white font-bold text-sm">CHEMSIM STUDIO - ENGINEERING CALCULATION REPORT</div>
+          <div class="text-[11px] text-slate-400">Generated on: ${dateStr} | Environment: ISO / OSHA Std Standard</div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-brand-400 font-bold border-b border-slate-800 pb-1">1. DISTILLATION COLUMN DESIGN (McCabe-Thiele)</div>
+          <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <div>• Relative Volatility (&alpha;): ${distillCache.alpha}</div>
+            <div>• Feed Quality (q): ${distillCache.q}</div>
+            <div>• Distillate Purity (xD): ${distillCache.xD}</div>
+            <div>• Bottoms Residue (xB): ${distillCache.xB}</div>
+            <div>• Operating Reflux (R): ${distillCache.R}</div>
+            <div>• Minimum Reflux (Rmin): ${distillCache.Rmin.toFixed(3)}</div>
+            <div>• Total Theoretical Stages: ${distillCache.totalStages}</div>
+            <div>• Optimal Feed Stage: #${distillCache.feedStage}</div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-amber-400 font-bold border-b border-slate-800 pb-1">2. SHELL & TUBE HEAT EXCHANGER RATING</div>
+          <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <div>• Flow Configuration: ${heatExCache.flow.toUpperCase()}</div>
+            <div>• Heat Duty (Q): ${heatExCache.Q_avg ? heatExCache.Q_avg.toFixed(1) : '--'} kW</div>
+            <div>• Hot Stream: ${heatExCache.Th_in}°C &rarr; ${heatExCache.Th_out}°C</div>
+            <div>• Cold Stream: ${heatExCache.Tc_in}°C &rarr; ${heatExCache.Tc_out}°C</div>
+            <div>• LMTD: ${heatExCache.LMTD ? heatExCache.LMTD.toFixed(2) : '--'} °C</div>
+            <div>• F Correction Factor: ${heatExCache.F_factor ? heatExCache.F_factor.toFixed(3) : '--'}</div>
+            <div>• Overall U: ${heatExCache.U} W/m²·K</div>
+            <div>• Required Area: ${heatExCache.Area ? heatExCache.Area.toFixed(2) : '--'} m² (${heatExCache.numTubes} tubes)</div>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-emerald-400 font-bold border-b border-slate-800 pb-1">3. SAFETY SIGN-OFF & HAZARD ASSESSMENT</div>
+          <p class="text-[11px] text-slate-400">
+            Certified compliant with chemical engineering unit operations principles. Incompatible pairings flagged by GHS matrix must follow OSHA 1910.119 Process Safety Management (PSM) guidelines.
+          </p>
+        </div>
+      `;
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeReportModal() {
+      document.getElementById('report-modal').classList.add('hidden');
+    }
+
+    // Window load handler
+    window.onload = function() {
+      lucide.createIcons();
+      updateDistillation();
+      updateHeatExchanger();
+      initChemicalModule();
+
+      // Window resize listener to re-render McCabe-Thiele canvas responsively
+      window.addEventListener('resize', () => {
+        if (!document.getElementById('tab-distillation').classList.contains('hidden')) {
+          renderMcCabeCanvas(distillCache);
+        }
+      });
+    };
+  </script>
+</body>
+</html>
+```
